@@ -38,6 +38,32 @@ python align.py test_data --output my_aligned_images
 python align.py test_data --base-name IMG_0002
 ```
 
+### Align the thermal image (band 6):
+```bash
+python align.py test_data --align-thermal
+```
+This upsamples the thermal band to the reference resolution and uses Mutual Information (MI) for robust multi-modal translation alignment, then crops to the same valid region and saves to the output directory.
+
+### Manual alignment for the thermal image (interactive):
+```bash
+python align.py test_data --align-thermal --manual-thermal --thermal-range-min 28924 --thermal-range-max 30754
+```
+- Arrow keys: move thermal (Up/Down/Left/Right)
+- +/- keys: zoom in/out (small steps)
+- Buttons: Up/Down/Left/Right/Zoom+/Zoom-/Confirm/Reset
+- Enter: confirm and save
+- The console prints the correction: `shift_y`, `shift_x`, and `scale`
+- Only the thermal display is min–max rescaled (by the provided DN range) for visualization; saved files are unchanged in radiometry
+
+### Apply known thermal correction (non-interactive):
+```bash
+python align.py test_data --align-thermal \
+   --thermal-shift-y -72.000 --thermal-shift-x -43.000 --thermal-scale 1.17258
+```
+- Applies the provided translation and scale to the thermal band, saves the cropped, aligned thermal TIFF.
+- Combine with `--debug` and optional `--thermal-range-min/max` to visually verify overlay.
+- Coordinate convention: positive `shift_y` moves thermal down; positive `shift_x` moves thermal right.
+
 ### Maximum precision alignment:
 ```bash
 python align.py test_data --upsample 200 --interpolation lanczos
@@ -98,6 +124,7 @@ When `--debug` is enabled, the script displays:
 - opencv-python
 - scikit-image
 - matplotlib
+ - SimpleITK
 
 Install with:
 ```bash
