@@ -70,24 +70,54 @@ python align.py test_data --upsample 200 --interpolation lanczos
 ```
 Higher upsample values (up to 1000) give better sub-pixel precision but are slower.
 
+### Handling parallax distortions beyond translation:
+
+For images with rotation, scale, or shear differences (affine distortions):
+```bash
+python align.py test_data --alignment-mode affine
+```
+
+For images with perspective/parallax distortions (e.g., from different camera angles):
+```bash
+python align.py test_data --alignment-mode homography
+```
+
+**Alignment modes:**
+- `translation` (default): Simple lateral shifts (fastest, works for most multispectral cameras)
+- `affine`: Handles rotation, scale, shear, and translation (parallax from small angle differences)
+- `homography`: Full perspective transform using feature matching (parallax from larger angle differences or lens distortions)
+
 ## How it works
 
 1. **Image loading**: Loads all images (first 5 from each set) and normalizes them
-2. **Shift detection**: Uses phase cross-correlation to detect sub-pixel shifts between each image and the reference
-3. **Alignment**: Applies translational shifts using high-quality interpolation (cubic by default)
-4. **Cropping**: Calculates the valid region present in all images and crops to that region
-5. **Saving**: Saves aligned images to output directory (default: `input_dir/aligned_output/`)
+2. **Transform estimation**: Depending on alignment mode:
+   - **Translation**: Phase cross-correlation for sub-pixel lateral shifts
+   - **Affine**: ECC (Enhanced Correlation Coefficient) refinement for rotation, scale, shear + translation
+   - **Homography**: ORB feature detection and RANSAC matching for full perspective transforms
+3. **Alignment**: Applies computed transformations using high-quality interpolation
+4. **Valid region**: Calculates the overlapping valid region present in all aligned images
+5. **Cropping**: Crops all images to the common valid region
+6. **Saving**: Saves aligned images to output directory (default: `input_dir/aligned_output/`)
 
 ## Maximizing Alignment Precision
 
 The script uses several techniques for maximum precision:
 
-1. **Phase Cross-Correlation**: Instead of feature matching, uses Fourier-based phase correlation which is:
-   - More accurate for translational shifts
-   - Robust to intensity differences
-   - Works well with texture (like wheat fields)
+1. **Multiple Alignment Modes**:
+   - **Translation** (default): Fourier-based phase correlation for sub-pixel lateral shifts
+     - Most accurate for simple camera offsets
+     - Fastest processing
+     - Works well with texture (like wheat fields)
+   - **Affine**: ECC-based registration handles rotation, scale, shear + translation
+     - Use when cameras have slight rotation or scale differences
+     - Handles parallax from small viewing angle differences
+     - Good for drone imagery with minor pitch/roll variations
+   - **Homography**: Feature-based perspective transform
+     - Handles full parallax distortions and lens effects
+     - Uses ORB features with RANSAC for robustness
+     - Best for images from significantly different viewpoints
 
-2. **Sub-pixel Upsampling**: Default factor of 100 means 0.01 pixel precision
+2. **Sub-pixel Upsampling** (for translation mode): Default factor of 100 means 0.01 pixel precision
    - Use `--upsample 200` for 0.005 pixel precision
    - Use `--upsample 500` or `1000` for ultimate precision (slower)
    
@@ -97,10 +127,14 @@ The script uses several techniques for maximum precision:
    - `--interpolation linear`: Fastest, lower quality
 
 4. **Tips for best results**:
+   - **Choose the right alignment mode**:
+     - Start with `translation` (default) for most multispectral camera systems
+     - Use `affine` if you see rotation or scale misalignment
+     - Use `homography` for complex parallax (different mounting angles, lens distortions)
    - Use the band with the most texture/contrast as reference
    - Ensure images are properly exposed (not over/under-exposed)
    - For wheat, green or red bands typically work best as reference
-   - The script preserves the full precision throughout (float32 operations)
+   - The script preserves full precision throughout (float32 operations)
 
 ## Debug Mode
 

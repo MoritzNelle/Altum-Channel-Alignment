@@ -1,6 +1,9 @@
 # Ignore large TIFF images and alignment outputs
 *.tif
 aligned_output/
+metrics.csv
+
+
 # VSCode and Python
 .vscode/
 __pycache__/
